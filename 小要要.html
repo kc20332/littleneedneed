@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色紀錄工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .avatar {
+            display: block;
+            margin: 0 auto 20px;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            background-size: cover;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .stats, .skills, .inventory {
+            margin-top: 20px;
+        }
+        .stat, .skill, .item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .stat-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100px;
+        }
+        .stat-value {
+            display: inline-block;
+            width: 100px;
+            text-align: center;
+        }
+        .stat-max-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100px;
+        }
+        .attribute, .skill, .item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .attribute-value, .skill-level, .item-quantity {
+            width: 50px;
+            text-align: center;
+        }
+        .section-title {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .inventory {
+            display: none;
+        }
+        .roll-result {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .roll-result.flash {
+            animation: flash 0.5s alternate 10;
+        }
+        @keyframes flash {
+            0% { color: black; }
+            100% { color: red; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>角色紀錄工具</h1>
+
+        <!-- ROLL 點功能 -->
+        <button onclick="rollDice()">ROLL 點</button>
+        <div id="roll-result" class="roll-result">點擊按鈕進行ROLL點</div>
+
+        <!-- 玩家基本資料 -->
+        <div>
+            <label>名字: <input type="text" id="player-name" value="玩家名稱"></label><br>
+            <label>現在地點: <input type="text" id="player-location" value="起始地點"></label>
+        </div>
+
+        <!-- 頭像設定 -->
+        <label for="avatarInput">
+            <div class="avatar" id="avatar" style="background-image: url('');"></div>
+        </label>
+        <input type="file" id="avatarInput" accept="image/*">
+        <p style="text-align: center;">點擊頭像設置圖片</p>
+
+        <!-- 血量和魔力 -->
+        <div class="stats">
+            <div class="stat">
+                <span>血量 (HP):</span>
+                <div class="stat-buttons">
+                    <button onclick="changeStat('hp', -1)">-</button>
+                    <button onclick="changeStat('hp', 1)">+</button>
+                </div>
+                <span id="hp-value" class="stat-value">40 / 40</span>
+                <div class="stat-max-buttons">
+                    <button onclick="changeMaxStat('hp', -1)">-</button>
+                    <button onclick="changeMaxStat('hp', 1)">+</button>
+                </div>
+            </div>
+            <div class="stat">
+                <span>魔力 (MP):</span>
+                <div class="stat-buttons">
+                    <button onclick="changeStat('mp', -1)">-</button>
+                    <button onclick="changeStat('mp', 1)">+</button>
+                </div>
+                <span id="mp-value" class="stat-value">13 / 13</span>
+                <div class="stat-max-buttons">
+                    <button onclick="changeMaxStat('mp', -1)">-</button>
+                    <button onclick="changeMaxStat('mp', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 屬性點 -->
+        <h3>屬性點</h3>
+        <div class="attributes">
+            <div class="attribute">
+                <span>力量:</span>
+                <button onclick="changeAttribute('strength', -1)">-</button>
+                <span id="strength-value" class="attribute-value">10</span>
+                <button onclick="changeAttribute('strength', 1)">+</button>
+            </div>
+            <div class="attribute">
+                <span>敏捷:</span>
+                <button onclick="changeAttribute('agility', -1)">-</button>
+                <span id="agility-value" class="attribute-value">10</span>
+                <button onclick="changeAttribute('agility', 1)">+</button>
+            </div>
+            <div class="attribute">
+                <span>魔力:</span>
+                <button onclick="changeAttribute('magic', -1)">-</button>
+                <span id="magic-value" class="attribute-value">10</span>
+                <button onclick="changeAttribute('magic', 1)">+</button>
+            </div>
+        </div>
+
+        <!-- 技能欄 -->
+        <h3>技能</h3>
+        <div class="skills" id="skills">
+            <!-- 技能會動態生成 -->
+        </div>
+        <button onclick="addSkill()">新增技能</button>
+
+        <!-- 背包系統 -->
+        <h3>背包</h3>
+        <button onclick="toggleInventory()">顯示/隱藏背包</button>
+        <div class="inventory" id="inventory">
+            <!-- 道具會動態生成 -->
+        </div>
+        <button onclick="addItem()">新增物品</button>
+
+        <!-- 存檔與讀檔 -->
+        <h3 class="section-title">存檔與讀檔</h3>
+        <button onclick="downloadSave()">下載存檔</button>
+        <input type="file" id="uploadSave" onchange="uploadSave(event)">
+        <label for="uploadSave" style="cursor: pointer; color: blue;">選擇文件上傳存檔</label>
+    </div>
+
+    <script>
+        // 頭像設置
+        document.getElementById('avatarInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatar').style.backgroundImage = 'url(' + e.target.result + ')';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 初始狀態
+        let hp = { current: 40, max: 40 };
+        let mp = { current: 13, max: 13 };
+        let attributes = {
+            strength: 10,
+            agility: 10,
+            magic: 10
+        };
+        let skills = [];
+        let inventory = [];
+
+        // 更新數值顯示
+        function updateDisplay() {
+            document.getElementById('hp-value').textContent = `${hp.current} / ${hp.max}`;
+            document.getElementById('mp-value').textContent = `${mp.current} / ${mp.max}`;
+            document.getElementById('strength-value').textContent = attributes.strength;
+            document.getElementById('agility-value').textContent = attributes.agility;
+            document.getElementById('magic-value').textContent = attributes.magic;
+            renderSkills();
+            renderInventory();
+        }
+
+        // 改變血量或魔力
+        function changeStat(stat, delta) {
+            if (stat === 'hp') {
+                hp.current = Math.max(0, Math.min(hp.max, hp.current + delta));
+            } else if (stat === 'mp') {
+                mp.current = Math.max(0, Math.min(mp.max, mp.current + delta));
+            }
+            updateDisplay();
+        }
+
+        // 改變血量或魔力上限
+        function changeMaxStat(stat, delta) {
+            if (stat === 'hp') {
+                hp.max = Math.max(1, hp.max + delta);
+                hp.current = Math.min(hp.current, hp.max); // 確保當前值不超過新上限
+            } else if (stat === 'mp') {
+                mp.max = Math.max(1, mp.max + delta);
+                mp.current = Math.min(mp.current, mp.max); // 確保當前值不超過新上限
+            }
+            updateDisplay();
+        }
+
+        // 改變屬性點
+        function changeAttribute(attribute, delta) {
+            attributes[attribute] = Math.max(0, attributes[attribute] + delta);
+            updateDisplay();
+        }
+
+        // 增加技能
+        function addSkill() {
+            const skillName = prompt("請輸入技能名稱:");
+            if (skillName) {
+                skills.push({ name: skillName, level: 1 });
+                updateDisplay();
+            }
+        }
+
+        // 渲染技能
+        function renderSkills() {
+            const skillsContainer = document.getElementById('skills');
+            skillsContainer.innerHTML = '';
+            skills.forEach((skill, index) => {
+                const skillDiv = document.createElement('div');
+                skillDiv.classList.add('skill');
+                skillDiv.innerHTML = `
+                    <span>${skill.name}:</span>
+                    <button onclick="changeSkillLevel(${index}, -1)">-</button>
+                    <span class="skill-level">${skill.level}</span>
+                    <button onclick="changeSkillLevel(${index}, 1)">+</button>
+                `;
+                skillsContainer.appendChild(skillDiv);
+            });
+        }
+
+        // 改變技能等級
+        function changeSkillLevel(index, delta) {
+            skills[index].level = Math.max(1, skills[index].level + delta);
+            updateDisplay();
+        }
+
+        // 增加物品
+        function addItem() {
+            const itemName = prompt("請輸入物品名稱:");
+            if (itemName) {
+                inventory.push({ name: itemName, quantity: 1 });
+                updateDisplay();
+            }
+        }
+
+        // 渲染背包
+        function renderInventory() {
+            const inventoryContainer = document.getElementById('inventory');
+            inventoryContainer.innerHTML = '';
+            inventory.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item');
+                itemDiv.innerHTML = `
+                    <span>${item.name}:</span>
+                    <button onclick="changeItemQuantity(${index}, -1)">-</button>
+                    <span class="item-quantity">${item.quantity}</span>
+                    <button onclick="changeItemQuantity(${index}, 1)">+</button>
+                `;
+                inventoryContainer.appendChild(itemDiv);
+            });
+        }
+
+        // 改變物品數量
+        function changeItemQuantity(index, delta) {
+            inventory[index].quantity = Math.max(0, inventory[index].quantity + delta);
+            if (inventory[index].quantity === 0) {
+                inventory.splice(index, 1); // 移除數量為0的物品
+            }
+            updateDisplay();
+        }
+
+        // 顯示/隱藏背包
+        function toggleInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            inventoryDiv.style.display = inventoryDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 下載存檔
+        function downloadSave() {
+            const data = {
+                playerName: document.getElementById('player-name').value,
+                playerLocation: document.getElementById('player-location').value,
+                hp,
+                mp,
+                attributes,
+                skills,
+                inventory
+            };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'character_save.json';
+            link.click();
+        }
+
+        // 上傳存檔
+        function uploadSave(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+                    document.getElementById('player-name').value = data.playerName;
+                    document.getElementById('player-location').value = data.playerLocation;
+                    hp = data.hp;
+                    mp = data.mp;
+                    attributes = data.attributes;
+                    skills = data.skills;
+                    inventory = data.inventory;
+                    updateDisplay();
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // ROLL 點功能
+        function rollDice() {
+            const rollResultDiv = document.getElementById('roll-result');
+            rollResultDiv.classList.add('flash');
+            let rollValue = Math.floor(Math.random() * 20) + 1;
+
+            // 閃爍後顯示結果
+            setTimeout(() => {
+                rollResultDiv.classList.remove('flash');
+                if (rollValue === 1 || rollValue === 2) {
+                    rollResultDiv.textContent = `${rollValue}！大失敗！`;
+                } else if (rollValue === 19) {
+                    rollResultDiv.textContent = `19！大成功！`;
+                } else if (rollValue === 20) {
+                    rollResultDiv.textContent = `20！大成功！！`;
+                } else {
+                    rollResultDiv.textContent = `結果：${rollValue}`;
+                }
+            }, 1000); // 閃爍 1 秒後顯示結果
+        }
+
+        // 初始化顯示
+        updateDisplay();
+    </script>
+
+</body>
+</html>
